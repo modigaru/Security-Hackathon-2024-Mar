@@ -1,0 +1,114 @@
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+import time
+import pandas
+import urllib.parse
+import re
+import requests
+
+url='<<<<<<<<<<<<<<<<<<<<<<please enter your url>>>>>>>>>>>>>>>>>>>>>>>>>>'
+
+options = Options()
+options.add_argument('--headless')  # Run browser in headless mode
+options.add_argument('--disable-gpu')  # Disable GPU acceleration
+
+s = Service(r"C:\Users\amodiga\Downloads\chromedriver-win64\chromedriver-win64\chromedriver.exe")
+driver = webdriver.Chrome(service=s, options=options)
+driver.get(url)
+time.sleep(6)
+#print("Effective url is=",driver.current_url)
+
+#if "Sign-in options</div>" and "<!-- ko ifnot: hideCantAccessYourAccount -->" and "<!-- ko if: isSubtitleVisible --><!-- /ko -->" in driver.page_source:
+#    print("Microsoft login page")
+#else:
+#    print("This is not login page manual intervention is required.") 
+#driver.quit()
+Finalurl_list=[]
+Finalurl_list.append(driver.current_url)
+Finalurl_list.append(url)
+t=0
+k=0
+merged_dict = {}
+m=0
+data={}
+for url in Finalurl_list:
+    #print(url)
+    
+    def extract_domains(url):
+        decoded_url = url
+        # Decode the URL until it cannot be further decoded
+        while True:
+            decoded_url_decoded_once = urllib.parse.unquote(decoded_url)
+            if decoded_url_decoded_once == decoded_url:
+                break
+            decoded_url = decoded_url_decoded_once
+        #print(decoded_url)
+        domains = []
+        # Remove the protocol part if it exists
+        url_parts = decoded_url.split("://")
+        if len(url_parts) > 1:
+            decoded_url = url_parts[1]
+        # Split the URL by '/'
+        path_parts = decoded_url.split("/")
+        # Regular expression pattern for matching domain names
+        domain_pattern = re.compile(r'((?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,})')
+        # Extract domains using regex
+        for part in path_parts:
+            domain_matches = domain_pattern.findall(part)
+            for domain in domain_matches:
+                domains.append(domain)
+        return domains
+    # Extract domains from the URL
+    domains = extract_domains(url)
+    # Print unique domains
+    unique_domains = set(domains)
+    new_domains=list(unique_domains)
+    def get_organization_details(name):
+        domain1=name
+        whois_url = f"https://www.whois.com/whois/{domain1}"
+        response = requests.get(whois_url)
+        whois_data = response.text
+        organization_match = re.search(r"Organization:\s+(.+)", whois_data, re.IGNORECASE)
+        if organization_match:
+            organization_details = organization_match.group(1)
+            return organization_details.strip()
+        else:
+            return "Organization details not found"
+    organization_list=[]
+    for name in new_domains:
+        organization = get_organization_details(name)
+        organization_list.append(organization)
+    df=pandas.DataFrame()
+    if m==0:
+        TLD1=new_domains
+        organization1=organization_list
+    if m==1:
+        TLD2=TLD1+new_domains
+        organization2=organization1+organization_list
+    m+=1
+print(TLD2)
+print(organization2)
+# Your list of strings
+
+# Convert all values in the list to lowercase
+organization2_lower = [value.lower() for value in organization2]
+
+# Check if all values are "microsoft corporation"
+if all(value == 'microsoft corporation' for value in organization2_lower):
+    print("List contains Microsoft domains.")
+
+# Check if all values are either "microsoft corporation" or "Organization details not found"
+elif all(value in ['microsoft corporation', 'organization details not found'] for value in organization2_lower):
+    if 'organization details not found' in organization2_lower:
+        print("All are Microsoft domains but for few domain registration details not found.")
+    else:
+        print("All are Microsoft domains.")
+
+# Check if there is at least one value that is not "microsoft corporation" or "Organization details not found"
+elif any(value not in ['microsoft corporation', 'organization details not found'] for value in organization2_lower):
+    print("Non-Microsoft domains observed.")
+
+# Check if all values are "Organization details not found"
+elif all(value == 'organization details not found' for value in organization2_lower):
+    print("No registration details found. Need human intervention.")
