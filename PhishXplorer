@@ -2,113 +2,87 @@ from selenium import webdriver
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 import time
-import pandas
 import urllib.parse
 import re
 import requests
-
-url='<<<<<<<<<<<<<<<<<<<<<<please enter your url>>>>>>>>>>>>>>>>>>>>>>>>>>'
-
+#url="https%253A%252F%252Fskeletonskull%252Enetlify%252Eapp"
+#url="https://login.live.com/login.srf?wa=wsignin1.0&rpsnv=162&ct=1729159979&rver=7.5.2211.0&wp=MBI_SSL&wreply=https%3a%2f%2foutlook.live.com%2fowa%2f%3fnlp%3d1%26cobrandid%3dab0455a0-8d03-46b9-b18b-df2f57b9e44c%26deeplink%3dowa%252f%26RpsCsrfState%3d284b355f-c019-3a63-bad2-637b88e797d5&id=292841&aadredir=1&CBCXT=out&lw=1&fl=dob%2cflname%2cwld&cobrandid=ab0455a0-8d03-46b9-b18b-df2f57b9e44c"
+url="https://login.microsoftonline.com/common/oauth2/v2.0/authorize?scope=service%3A%3Aaccount.microsoft.com%3A%3AMBI_SSL%20openid%20profile%20offline_access&response_type=code&client_id=81feaced-5ddd-41e7-8bef-3e20a2689bb7&redirect_uri=https%3A%2F%2Faccount.microsoft.com%2Fauth%2Fcomplete-signin-oauth&client-request-id=b947babb-7553-416e-923d-d2b3efe82996&x-client-SKU=MSAL.Desktop&x-client-Ver=4.61.3.0&x-client-OS=Windows%20Server%202019%20Datacenter&prompt=login&client_info=1&state=H4sIAAAAAAAEAA3LSXaCMAAA0Lt02wUzJkswiJYnxDBI3CEkDAYkDKI9ffv3_8sSAOs_VctnnJl-Sg0yUpDt2ftUiKKzRM2oz82SaPhjCy_8rfWFP3of33DYH0WB9NtjV27v0NPDWXJUQHVV5e5YitoiiIC0V5243t6u3K2hFlF-qU6T8gwu0uVDqxB9EHZQb0JIZa68l_3_pmBODBaFZdsY7mPNTTiLvHWvSYD0-9AyRKYcAB-Srv_Ij4EwaGyO9_cdoM3Z1uGo2VihYfe8CPNRD5gzpw3M5fPytlNG0zFebNipJBYHTUVGbDVz5RS376iPzeF0TWKEAEr3tQxzJ0-4Ag8_eBm_h6zpcDJezguc3nMqlGrIi_voHNdl8rhUtZWh1K4pY0mqQJ9ewRNmYEGJL1_ng9G3Uco2nkUmobB47iPkKswq1dfXH0IlrPKCAQAA&msaoauth2=true&lc=1033&ru=https%3A%2F%2Faccount.microsoft.com%2Faccount"
+def decoded_url(url):
+    decoded_url=url
+    while '%'in decoded_url:
+        decoded_url=urllib.parse.unquote(decoded_url)
+    return decoded_url
+orginal_url=decoded_url(url)
+#print(orginal_url)
+#can added multiple blocks for any type of decoding to get the orginal url
+# Now we got the orginal url access the orginal url using selenium webdriver in chrome to verify whether it is microsoft login page or not
 options = Options()
 options.add_argument('--headless')  # Run browser in headless mode
-options.add_argument('--disable-gpu')  # Disable GPU acceleration
-
-s = Service(r"C:\Users\amodiga\Downloads\chromedriver-win64\chromedriver-win64\chromedriver.exe")
-driver = webdriver.Chrome(service=s, options=options)
-driver.get(url)
-time.sleep(6)
-#print("Effective url is=",driver.current_url)
-
-#if "Sign-in options</div>" and "<!-- ko ifnot: hideCantAccessYourAccount -->" and "<!-- ko if: isSubtitleVisible --><!-- /ko -->" in driver.page_source:
-#    print("Microsoft login page")
-#else:
-#    print("This is not login page manual intervention is required.") 
-#driver.quit()
-Finalurl_list=[]
-Finalurl_list.append(driver.current_url)
-Finalurl_list.append(url)
-t=0
-k=0
-merged_dict = {}
-m=0
-data={}
+s = Service(r"C:\Users\amodiga\Downloads\chromedriver-win64\chromedriver-win64\chromedriver.exe")#update the chrome or downgrade the browser if there is any error
+driver = webdriver.Chrome(service=s, options=options)# for directing how the browser should run by staring the service, running in healess mode passing them as arugemts
+driver.get(orginal_url)#calling the browser to run the url
+time.sleep(6)#waiting for 6 seconds till the browser loads
+k=0#declaring a random variable to use in next step for identifying whether it is microsoft login page or not
+if "Sign-in options</div>" and "<!-- ko ifnot: hideCantAccessYourAccount -->" and "<!-- ko if: isSubtitleVisible --><!-- /ko -->" in driver.page_source:
+    print("This is a Microsoft login page, please check below for verdict")
+    k=1
+elif "cantAccessAccount" and "Create one!" and "Sign-in options" and "No account?" in driver.page_source:
+    print("This is a Microsoft login page, please check below for verdict")
+    k=1
+elif "Create one!" and  "Next</button>" and "Sign-in options" and  "to continue to Outlook" in driver.page_source:
+    print("Outlook Login Page")
+    k=1
+else:
+    print("This is not login page or url is not active manual intervention is required please find the details below.")
+#By Now we are able to get the orginal url if it is encoded and able to identify whether the page is Microsoft login page or not.
+Finalurl_list=[]#declaring the list to store the prginal url and final landingurl if it is redirected to differnt url , so total 2 url's
+Finalurl_list.append(driver.current_url)#storing the redirected url
+Finalurl_list.append(orginal_url)#storing the initial orginal url after decoding(if encoded)
+#By Now we were able to identify the url's which we need to verify whether they are phishing or not.
+#Now we need to take the https:// out of the url's running a loop if there are two differnt url's in Finalurl_list
 for url in Finalurl_list:
-    #print(url)
-    
-    def extract_domains(url):
-        decoded_url = url
-        # Decode the URL until it cannot be further decoded
-        while True:
-            decoded_url_decoded_once = urllib.parse.unquote(decoded_url)
-            if decoded_url_decoded_once == decoded_url:
-                break
-            decoded_url = decoded_url_decoded_once
-        #print(decoded_url)
-        domains = []
-        # Remove the protocol part if it exists
-        url_parts = decoded_url.split("://")
-        if len(url_parts) > 1:
-            decoded_url = url_parts[1]
-        # Split the URL by '/'
-        path_parts = decoded_url.split("/")
-        # Regular expression pattern for matching domain names
-        domain_pattern = re.compile(r'((?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,})')
-        # Extract domains using regex
-        for part in path_parts:
-            domain_matches = domain_pattern.findall(part)
-            for domain in domain_matches:
-                domains.append(domain)
-        return domains
-    # Extract domains from the URL
-    domains = extract_domains(url)
-    # Print unique domains
-    unique_domains = set(domains)
-    new_domains=list(unique_domains)
-    def get_organization_details(name):
-        domain1=name
-        whois_url = f"https://www.whois.com/whois/{domain1}"
-        response = requests.get(whois_url)
-        whois_data = response.text
-        organization_match = re.search(r"Organization:\s+(.+)", whois_data, re.IGNORECASE)
-        if organization_match:
-            organization_details = organization_match.group(1)
-            return organization_details.strip()
-        else:
-            return "Organization details not found"
-    organization_list=[]
-    for name in new_domains:
-        organization = get_organization_details(name)
-        organization_list.append(organization)
-    df=pandas.DataFrame()
-    if m==0:
-        TLD1=new_domains
-        organization1=organization_list
-    if m==1:
-        TLD2=TLD1+new_domains
-        organization2=organization1+organization_list
-    m+=1
-print(TLD2)
-print(organization2)
-# Your list of strings
-
-# Convert all values in the list to lowercase
-organization2_lower = [value.lower() for value in organization2]
-
-# Check if all values are "microsoft corporation"
-if all(value == 'microsoft corporation' for value in organization2_lower):
-    print("List contains Microsoft domains.")
-
-# Check if all values are either "microsoft corporation" or "Organization details not found"
-elif all(value in ['microsoft corporation', 'organization details not found'] for value in organization2_lower):
-    if 'organization details not found' in organization2_lower:
-        print("All are Microsoft domains but for few domain registration details not found.")
+    domains=[]
+    # Remove the protocol part if it exists
+    domain_regex=r'((?:[a-zA-Z0-9-]+\.)+[a-zA-Z]{2,})'
+    domains= re.findall(domain_regex, url)
+    domains+=domains
+#print(domains)
+domains=set(domains)#for removing duplicates
+if 'login.srf' in domains or 'MSAL.Desktop' in domains:
+    if 'login.srf' in domains:
+        domains.remove('login.srf')
+    if 'MSAL.Desktop' in domains:
+        domains.remove('MSAL.Desktop')
+#print(type(domains)) 
+#print(domains)  
+# BY Now we are able to extract the domains from the url's
+#Now we need to find who is the owner of the domains
+organization_details=[]
+#print(type(organization_details))
+for name in domains:
+    domain1=name
+    whois_url = f"https://www.whois.com/whois/{domain1}"
+    response = requests.get(whois_url)
+    whois_data = response.text
+    organization_match = re.search(r"Organization:\s+(.+)", whois_data, re.IGNORECASE)
+    if organization_match:
+        organization_details.append(organization_match.group(1))
     else:
-        print("All are Microsoft domains.")
+        organization_details.append("Organization details not found")# for " + domain1)
+print("Unique Domain names found in url's",domains)
+# Convert all values in the list to lowercase
+organization_details_tolower=[value.lower() for value in organization_details]
+print("Organizational details of the resepctive domains found in url", organization_details_tolower)
+# Check if all values are "microsoft corporation"
+if all(value == 'microsoft corporation' for value in organization_details_tolower) and k==1:
+    print("List contains Microsoft domains this is a legit microsoft page .")
+# Check if there is at least one value that is not "microsoft corporation" 
+if all(value not in ['microsoft corporation', 'organization details not found'] for value in organization_details_tolower) and k==1:
+    print("This is a  phishing page Non Microsoft domains observed in Microsoft login page")
+# Check if all values are either "microsoft corporation" or "Organization details not found"
+#if all(value == 'microsoft corporation' or value == 'organization details not found' for value in organization_details_tolower) and k == 1:   
+#    print("All are Microsoft domains but for few domain registration details not found.")
+if any(value == 'organization details not found' for value in organization_details_tolower) and all(value in ['microsoft corporation', 'organization details not found'] for value in organization_details_tolower) and k == 1:
+    print("All are Microsoft domains, but for a few, domain registration details were not found.")
 
-# Check if there is at least one value that is not "microsoft corporation" or "Organization details not found"
-elif any(value not in ['microsoft corporation', 'organization details not found'] for value in organization2_lower):
-    print("Non-Microsoft domains observed.")
-
-# Check if all values are "Organization details not found"
-elif all(value == 'organization details not found' for value in organization2_lower):
-    print("No registration details found. Need human intervention.")
